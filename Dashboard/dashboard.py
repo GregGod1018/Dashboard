@@ -838,7 +838,8 @@ def get_last_7_days_table(xls, active_sheet, df):
             last_7_days_sp_df = pd.concat([last_7_days_sp_df, daily_result_sp_df], ignore_index=True)
 
     last_7_days_sp_df = last_7_days_sp_df.groupby("Site Name", as_index=False).agg({"Specific Production": "mean"})
-    last_7_days_sp_df["Specific Production"] = last_7_days_sp_df["Specific Production"].round(2)
+    last_7_days_sp_df["Specific Production"] = (pd.to_numeric(last_7_days_sp_df["Specific Production"], errors="coerce").round(2).fillna(0))
+
 
     ppr_sheets = [sheet for sheet in xls.sheet_names if 'PPR' in sheet and 'Target' not in sheet]
     if not ppr_sheets:
