@@ -1,0 +1,9 @@
+[theme]
+font = "IBM Plex Mono"
+base = "dark"
+primaryColor = "#22C55E"         
+backgroundColor = "#0F172A"          
+secondaryBackgroundColor = "#1E293B" 
+textColor = "#F8FAFC"    
+linkColor = "#4ADE80"                
+borderColor = "#334155"              
