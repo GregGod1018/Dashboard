@@ -794,7 +794,8 @@ def get_last_7_days_table(xls, active_sheet, df):
             last_7_days_kwh_df = pd.concat([last_7_days_kwh_df, daily_result_kwh_df], ignore_index=True)
 
     last_7_days_kwh_df = last_7_days_kwh_df.groupby("Site Name", as_index=False).agg({"kWh": "sum"})
-    last_7_days_kwh_df["kWh"] = last_7_days_kwh_df["kWh"].round(2)
+    last_7_days_kwh_df["kWh"] = (pd.to_numeric(last_7_days_kwh_df["kWh"], errors="coerce").round(2).fillna(0))
+
 
     sp_sheets = [sheet for sheet in xls.sheet_names if 'SP' in sheet and 'Target' not in sheet]
     if not sp_sheets:
