@@ -1334,7 +1334,7 @@ def AF(show_subheader=True):
     avg_af = grouped_af_df["Availability Factor"].mean()
     return grouped_af_df, x_col_af, hover_data_af, total_af, avg_af
 
-st.set_page_config(page_title="Dashboard", page_icon="GEMI_logo.png", layout="wide")
+st.set_page_config(page_title="Dashboard", page_icon="Dashboard/GEMI_logo.png", layout="wide")
 st.subheader("Analysis")
 
 st.markdown(
@@ -1356,7 +1356,7 @@ if uploaded_file:
     if "active_sheet" not in st.session_state:
         st.session_state["active_sheet"] = "SMIP Database"
 
-    st.sidebar.image("GEMI_logo.png")
+    st.sidebar.image("Dashboard/GEMI_logo.png")
     
     selected_page = option_menu(
         menu_title="",
