@@ -884,7 +884,8 @@ def get_last_7_days_table(xls, active_sheet, df):
             st.warning(f"No matching columns found for date abbreviation: {date_abbr}")
 
     last_7_days_ppr_df = last_7_days_ppr_df.groupby("Site Name", as_index=False).agg({"PPR": "mean"})
-    last_7_days_ppr_df["PPR"] = last_7_days_ppr_df["PPR"].round(2)
+    last_7_days_ppr_df["PPR"] = (pd.to_numeric(last_7_days_ppr_df["PPR"], errors="coerce").round(2).fillna(0))
+
 
     last_7_days_df = pd.merge(last_7_days_kwh_df, last_7_days_sp_df, on="Site Name", how="outer")
     last_7_days_df = pd.merge(last_7_days_df, last_7_days_ppr_df, on="Site Name", how="outer")
