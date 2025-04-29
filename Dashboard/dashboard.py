@@ -1028,7 +1028,8 @@ def get_last_30_days_table(xls, active_sheet, df):
             last_30_days_ppr_df = pd.concat([last_30_days_ppr_df, daily_result_ppr_df], ignore_index=True)
 
     last_30_days_ppr_df = last_30_days_ppr_df.groupby("Site Name", as_index=False).agg({"PPR": "mean"})
-    last_30_days_ppr_df["PPR"] = last_30_days_ppr_df["PPR"].round(2)
+    last_30_days_ppr_df["PPR"] = (pd.to_numeric(last_30_days_ppr_df["PPR"], errors="coerce").round(2).fillna(0))
+
 
     last_30_days_df = pd.merge(last_30_days_kwh_df, last_30_days_sp_df, on="Site Name", how="outer")
     last_30_days_df = pd.merge(last_30_days_df, last_30_days_ppr_df, on="Site Name", how="outer")
