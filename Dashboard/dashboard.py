@@ -794,8 +794,7 @@ def get_last_7_days_table(xls, active_sheet, df):
             last_7_days_kwh_df = pd.concat([last_7_days_kwh_df, daily_result_kwh_df], ignore_index=True)
 
     last_7_days_kwh_df = last_7_days_kwh_df.groupby("Site Name", as_index=False).agg({"kWh": "sum"})
-    last_7_days_kwh_df["kWh"] = (pd.to_numeric(last_7_days_kwh_df["kWh"], errors="coerce").round(2).fillna(0))
-
+    last_7_days_kwh_df["kWh"] = last_7_days_kwh_df["kWh"].round(2)
 
     sp_sheets = [sheet for sheet in xls.sheet_names if 'SP' in sheet and 'Target' not in sheet]
     if not sp_sheets:
@@ -838,8 +837,7 @@ def get_last_7_days_table(xls, active_sheet, df):
             last_7_days_sp_df = pd.concat([last_7_days_sp_df, daily_result_sp_df], ignore_index=True)
 
     last_7_days_sp_df = last_7_days_sp_df.groupby("Site Name", as_index=False).agg({"Specific Production": "mean"})
-    last_7_days_sp_df["Specific Production"] = (pd.to_numeric(last_7_days_sp_df["Specific Production"], errors="coerce").round(2).fillna(0))
-
+    last_7_days_sp_df["Specific Production"] = last_7_days_sp_df["Specific Production"].round(2)
 
     ppr_sheets = [sheet for sheet in xls.sheet_names if 'PPR' in sheet and 'Target' not in sheet]
     if not ppr_sheets:
@@ -884,8 +882,7 @@ def get_last_7_days_table(xls, active_sheet, df):
             st.warning(f"No matching columns found for date abbreviation: {date_abbr}")
 
     last_7_days_ppr_df = last_7_days_ppr_df.groupby("Site Name", as_index=False).agg({"PPR": "mean"})
-    last_7_days_ppr_df["PPR"] = (pd.to_numeric(last_7_days_ppr_df["PPR"], errors="coerce").round(2).fillna(0))
-
+    last_7_days_ppr_df["PPR"] = last_7_days_ppr_df["PPR"].round(2)
 
     last_7_days_df = pd.merge(last_7_days_kwh_df, last_7_days_sp_df, on="Site Name", how="outer")
     last_7_days_df = pd.merge(last_7_days_df, last_7_days_ppr_df, on="Site Name", how="outer")
@@ -941,8 +938,7 @@ def get_last_30_days_table(xls, active_sheet, df):
             last_30_days_kwh_df = pd.concat([last_30_days_kwh_df, daily_result_kwh_df], ignore_index=True)
 
     last_30_days_kwh_df = last_30_days_kwh_df.groupby("Site Name", as_index=False).agg({"kWh": "sum"})
-    last_30_days_kwh_df["kWh"] = (pd.to_numeric(last_30_days_kwh_df["kWh"], errors="coerce").round(2).fillna(0))
-
+    last_30_days_kwh_df["kWh"] = last_30_days_kwh_df["kWh"].round(2)
 
     sp_sheets = [sheet for sheet in xls.sheet_names if 'SP' in sheet and 'Target' not in sheet]
     if not sp_sheets:
@@ -1028,8 +1024,7 @@ def get_last_30_days_table(xls, active_sheet, df):
             last_30_days_ppr_df = pd.concat([last_30_days_ppr_df, daily_result_ppr_df], ignore_index=True)
 
     last_30_days_ppr_df = last_30_days_ppr_df.groupby("Site Name", as_index=False).agg({"PPR": "mean"})
-    last_30_days_ppr_df["PPR"] = (pd.to_numeric(last_30_days_ppr_df["PPR"], errors="coerce").round(2).fillna(0))
-
+    last_30_days_ppr_df["PPR"] = last_30_days_ppr_df["PPR"].round(2)
 
     last_30_days_df = pd.merge(last_30_days_kwh_df, last_30_days_sp_df, on="Site Name", how="outer")
     last_30_days_df = pd.merge(last_30_days_df, last_30_days_ppr_df, on="Site Name", how="outer")
@@ -1339,7 +1334,7 @@ def AF(show_subheader=True):
     avg_af = grouped_af_df["Availability Factor"].mean()
     return grouped_af_df, x_col_af, hover_data_af, total_af, avg_af
 
-st.set_page_config(page_title="Dashboard", page_icon="Dashboard/GEMI_logo.png", layout="wide")
+st.set_page_config(page_title="Dashboard", page_icon="GEMI_logo.png", layout="wide")
 st.subheader("Analysis")
 
 st.markdown(
@@ -1361,7 +1356,7 @@ if uploaded_file:
     if "active_sheet" not in st.session_state:
         st.session_state["active_sheet"] = "SMIP Database"
 
-    st.sidebar.image("Dashboard/GEMI_logo.png")
+    st.sidebar.image("GEMI_logo.png")
     
     selected_page = option_menu(
         menu_title="",
@@ -1481,7 +1476,7 @@ if uploaded_file:
 
                 if year:
                     yearly_df["Year"] = int(year)
-
+    
                 if time_filter == "Daily":
                     month_cols = [col for col in month_cols if col.startswith(selected_month[:3])]
 
@@ -1943,6 +1938,7 @@ if uploaded_file:
             st.warning("No matching dates found for daily kWh and target kWh data.")
         filtered_table_df = get_filtered_table(xls, st.session_state["active_sheet"], df, start_date, end_date, selected_cluster)
         filtered_table_df = filtered_table_df.fillna(0)
+        filtered_table_df.index = filtered_table_df.index + 1
         if not filtered_table_df.empty:
             st.dataframe(filtered_table_df.style.format({
                 "kWh": "{:.2f}",
