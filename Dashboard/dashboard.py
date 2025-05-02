@@ -1446,7 +1446,7 @@ if uploaded_file:
         years = sorted(set(''.join(filter(str.isdigit, sheet)) for sheet in kwh_sheets))
 
         if time_filter in ["Daily", "Monthly"] and years:
-            selected_year = st.sidebar.selectbox("Select Year", years)
+            selected_year = st.sidebar.selectbox("Select Year", years, index=len(years)-1)
 
         if time_filter == "Daily":
             months = list(calendar.month_name[1:])
