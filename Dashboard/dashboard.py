@@ -1438,6 +1438,7 @@ if uploaded_file:
         kwh_sheets = [str(sheet) for sheet in xls.sheet_names if 'kWh' in str(sheet) and 'Target' not in str(sheet)]
         sp_sheets = [str(sheet) for sheet in xls.sheet_names if 'SP' in str(sheet) and 'Target' not in str(sheet)]
         af_sheets = [str(sheet) for sheet in xls.sheet_names if 'AF' in str(sheet) and 'Target' not in str(sheet)]
+        ppr_sheets = [str(sheet) for sheet in xls.sheet_names if 'PPR' in str(sheet) and 'Target' not in str(sheet)]
 
         if not kwh_sheets:
             st.error("No valid 'kWh' sheets found.")
@@ -1456,6 +1457,7 @@ if uploaded_file:
         combined_df = pd.DataFrame()
         combined_sp_df = pd.DataFrame()
         combined_af_df = pd.DataFrame()
+        combined_ppr_df = pd.DataFrame()
 
         for sheet in kwh_sheets:
             try:
@@ -1581,8 +1583,6 @@ if uploaded_file:
             except Exception as e:
                 st.error(f"Failed to load {sheet}: {str(e)}")
 
-
-
         for sheet in af_sheets:
             try:
                 year = ''.join(filter(str.isdigit, str(sheet)))
@@ -1645,9 +1645,69 @@ if uploaded_file:
 
             except Exception as e:
                 st.error(f"Failed to load {sheet}: {str(e)}")
+
+        for sheet in ppr_sheets:
+            try:
+                year = ''.join(filter(str.isdigit, str(sheet)))
+
+                if time_filter in ["Monthly", "Daily"] and year != selected_year:
+                    continue
+
+                yearly_ppr_df = pd.read_excel(xls, sheet_name=sheet, header=0)
+                yearly_ppr_df.columns = yearly_ppr_df.columns.str.strip().astype(str)
+
+                month_names = [month[:3] for month in calendar.month_name[1:]]
+                month_cols = [str(col) for col in yearly_ppr_df.columns if any(month in str(col) for month in month_names)]
+
+                if not month_cols:
+                    st.warning(f"No valid month columns in '{sheet}'. Skipping.")
+                    continue
+
+                yearly_ppr_df = yearly_ppr_df.iloc[453:].reset_index(drop=True)
+
+                if "Site Name" in yearly_ppr_df.columns:
+                    yearly_ppr_df = yearly_ppr_df[yearly_ppr_df["Site Name"].astype(str).isin(df["Site Name"].astype(str))]
+
+                if year:
+                    yearly_ppr_df["Year"] = int(year)
+
+                if time_filter == "Daily":
+                    month_cols = [col for col in month_cols if col.startswith(selected_month[:3])]
+
+                    daily_ppr_df = yearly_ppr_df.melt(
+                        id_vars=["Cluster", "Site Name", "Year"],
+                        value_vars=month_cols,
+                        var_name="Day",
+                        value_name="PPR"
+                    )
+
+                    daily_ppr_df["Day"] = daily_ppr_df["Day"].str.extract(r'(\d+)')[0].astype(int)
+                    daily_ppr_df["Date"] = pd.to_datetime(
+                        f"{selected_year}-{month_number}-" + daily_ppr_df["Day"].astype(str),
+                        errors="coerce"
+                    )
+
+                    daily_ppr_df["PPR"] = pd.to_numeric(daily_ppr_df["PPR"], errors='coerce').fillna(0)
+                    combined_ppr_df = pd.concat([combined_ppr_df, daily_ppr_df], ignore_index=True)
+
+                else:
+                    melted_ppr_df = yearly_ppr_df.melt(
+                        id_vars=["Cluster", "Site Name", "Year"],
+                        value_vars=month_cols,
+                        var_name="Month",
+                        value_name="PPR"
+                    )
+
+                    melted_ppr_df["Month"] = pd.to_datetime(melted_ppr_df["Month"].str[:3], format='%b').dt.month
+                    melted_ppr_df["PPR"] = pd.to_numeric(melted_ppr_df["PPR"], errors='coerce').fillna(0)
+                    combined_ppr_df = pd.concat([combined_ppr_df, melted_ppr_df], ignore_index=True)
+
+            except Exception as e:
+                st.error(f"Failed to load {sheet}: {str(e)}")
             combined_df = create_date_column_and_filter(combined_df, time_filter)
             combined_sp_df = create_date_column_and_filter(combined_sp_df, time_filter)
             combined_af_df = create_date_column_and_filter(combined_af_df, time_filter)
+            combined_ppr_df = create_date_column_and_filter(combined_ppr_df, time_filter)
 
             color_palette = px.colors.qualitative.Bold
 
@@ -1705,33 +1765,33 @@ if uploaded_file:
                 )
                 st.plotly_chart(fig_af, key="AF_chart")
 
-            combined_df["kWh"] = combined_df["kWh"].fillna(0)
-            site_production_df = combined_df.groupby("Site Name", as_index=False)["kWh"].sum()
-            site_production_df = site_production_df.sort_values("kWh", ascending=False)
+            combined_ppr_df["PPR"] = combined_ppr_df["PPR"].fillna(0)
+            site_production_ppr_df = combined_ppr_df.groupby("Site Name", as_index=False)["PPR"].mean()
+            site_production_ppr_df = site_production_ppr_df.sort_values("PPR", ascending=False)
+            site_production_ppr_df["PPR"] = site_production_ppr_df["PPR"] * 100
+            top_producers = site_production_ppr_df.nlargest(5, "PPR")
+            lowest_producers = site_production_ppr_df.nsmallest(5, "PPR")
 
-            top_producers = site_production_df.nlargest(5, "kWh")
-            lowest_producers = site_production_df.nsmallest(5, "kWh")
+            st.subheader("📊 Highest & Lowest PPR Production by Site")
 
-            st.subheader("📊 Highest & Lowest kWh Production by Site")
-
-            site_production_df["kWh_hover"] = site_production_df["kWh"].map("{:,.2f}".format)
+            site_production_ppr_df["PPR_hover"] = site_production_ppr_df["PPR"].map("{:,.2f}".format)
 
             fig_bar = px.bar(
-                site_production_df,
-                x="kWh",
+                site_production_ppr_df,
+                x="PPR",
                 y="Site Name",
-                color="kWh",
+                color="PPR",
                 orientation="h",
-                labels={"kWh": "Total kWh", "Site Name": "Site"},
+                labels={"PPR": "Total PPR", "Site Name": "Site"},
                 color_continuous_scale="viridis",
                 height=650,
-                hover_data={"kWh_hover": True, "kWh": False}
+                hover_data={"PPR_hover": True, "PPR": False}
             )
 
-            fig_bar.update_traces(hovertemplate='<b>Site:</b> %{y}<br><b>Total kWh:</b> %{customdata[0]}')
+            fig_bar.update_traces(hovertemplate='<b>Site:</b> %{y}<br><b>Total PPR:</b> %{customdata[0]}%')
 
             fig_bar.add_annotation(
-                x=top_producers["kWh"].iloc[0],
+                x=top_producers["PPR"].iloc[0],
                 y=top_producers["Site Name"].iloc[0],
                 text="🏅 Highest",
                 showarrow=True,
@@ -1742,7 +1802,7 @@ if uploaded_file:
             )
 
             fig_bar.add_annotation(
-                x=lowest_producers["kWh"].iloc[0],
+                x=lowest_producers["PPR"].iloc[0],
                 y=lowest_producers["Site Name"].iloc[0],
                 text="🔻 Lowest",
                 showarrow=True,
